@@ -232,7 +232,7 @@
   (when (er--point-inside-string-p)
     (er--move-point-backward-out-of-string)
     (save-excursion
-    (forward-char)
+      (forward-char)
       (skip-chars-forward er--space-str)
       (set-mark (point)))
     (er--move-point-forward-out-of-string)
@@ -369,9 +369,26 @@ moving point or mark as little as possible."
 (defun er/contract-region ()
   "Contract the selected region to its previous size."
   (interactive)
-
-  (if (and er/history
-           (not (er--first-invocation)))
+  (when (and (use-region-p)
+             (or (null er/history)
+                 (eq (car (car er/history))
+                     (cdr (car er/history)))))
+    (let ((string-p (and (looking-at "\\s\"")
+                         (save-excursion (forward-char) (er--point-inside-string-p))))
+          (pair-p (and (looking-at "\\s(")
+                       (save-excursion (forward-char) (er--point-inside-pairs-p))))
+          end)
+      (when (or string-p pair-p)
+        (save-excursion
+          (goto-char (mark))
+          (backward-char 1)
+          (skip-chars-backward er--space-str)
+          (setq end (point)))
+        (forward-char 1)
+        (skip-chars-forward er--space-str)
+        (push (cons (point)end) er/history))))
+  (if ( and er/history
+            (use-region-p) )
       (let* ((last (pop er/history))
              (start (car last))
              (end (cdr last)))
